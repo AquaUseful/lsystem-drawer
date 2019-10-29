@@ -1,7 +1,28 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QColorDialog, QFileDialog, QInputDialog, QMessageBox
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
+from typing import Any
+from PIL.Image import Image
+from core import LsystemImage, Lsystem
+
+
+class LsystemStringGenerator(QObject):
+    finishSignal = pyqtSignal()
+
+    @pyqtSlot()
+    def generate(self, lsystem: Lsystem, iteration: int) -> None:
+        lsystem.generate_strings(iteration)
+        self.finishSignal.emit()
+
+
+class LsystemImageDrawer(QObject):
+    finishSignal = pyqtSignal()
+
+    @pyqtSlot()
+    def draw(self, lsystem_image: LsystemImage, iteration: int) -> None:
+        lsystem_image.generate_image(iteration)
+        self.finishSignal.emit()
 
 
 class Ui_MainWindow(object):
