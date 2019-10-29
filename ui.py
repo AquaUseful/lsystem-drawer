@@ -12,7 +12,7 @@ class LsystemStringGenerator(QObject):
 
     @pyqtSlot()
     def generate(self, lsystem: Lsystem, iteration: int) -> None:
-        lsystem.generate_strings(iteration)
+        lsystem.update_strings(iteration)
         self.finishSignal.emit()
 
 
@@ -21,7 +21,7 @@ class LsystemImageDrawer(QObject):
 
     @pyqtSlot()
     def draw(self, lsystem_image: LsystemImage, iteration: int) -> None:
-        lsystem_image.generate_image(iteration)
+        lsystem_image.update_image(iteration)
         self.finishSignal.emit()
 
 
