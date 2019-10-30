@@ -6,6 +6,7 @@ from math import pi
 
 class Lsystem(object):
     def __init__(self, name: str, inititator: str, rules: dict) -> None:
+        self.name = name
         self.initiator = inititator
         self.rules = rules
         self.strings = []
@@ -24,6 +25,12 @@ class Lsystem(object):
 
     def get_string(self, iteration):
         return self.strings[iteration]
+
+    def set_name(self, name: str) -> None:
+        self.name = name
+
+    def get_name(self) -> str:
+        return self.name
 
     def update_strings(self, iterations: int) -> None:
         strings = [self.initiator]
@@ -94,3 +101,30 @@ class LsystemImage(object):
         self._make_empty_image()
         self._make_draw()
         self._draw_lsystem(iteration)
+
+    def set_size(self, size: tuple) -> None:
+        self.size = size
+
+    def set_size(self, heigth: int, width: int) -> None:
+        self.size = (heigth, width)
+
+    def set_start_coords(self, coords: tuple) -> None:
+        self.start_coords = coords
+
+    def set_start_coords(self, x: int, y: int) -> None:
+        self.start_coords = (x, y)
+
+    def set_start_angle(self, angle: float) -> None:
+        self.start_angle = angle
+
+    def set_rot_angle(self, angle: float) -> None:
+        self.rot_angle = angle
+
+    def set_step_length(self, length: int) -> None:
+        self.step_length = length
+
+    def set_bg_color(self, color) -> None:
+        self.bg_color = color
+
+    def set_line_color(self, color) -> None:
+        self.line_color = color
