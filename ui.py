@@ -2,9 +2,9 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QColorDialog, QFileDialog, QInputDialog, QMessageBox
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
-from typing import Any
 from PIL.Image import Image
 from core import LsystemImage, Lsystem
+from utils import decart_to_image_coords, angle_part_of_circle, deg_to_rad, strings_to_dict, image_to_pixmap
 
 
 class LsystemStringGenerator(QObject):
