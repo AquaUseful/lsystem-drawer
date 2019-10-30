@@ -1,6 +1,7 @@
-import utils
+from utils import point_on_circle, check_coords
 from PIL.Image import Image
 from PIL.ImageDraw import Draw, ImageDraw
+from math import pi
 
 
 class Lsystem(object):
@@ -64,7 +65,7 @@ class LsystemImage(object):
         for char in string:
             if char == "F":
                 new_x, new_y = point_on_circle((x, y), step_length, angle)
-                if check_coords((x, y), (new_x, new_y), max_coords):
+                if check_coords((x, y), (new_x, new_y), self.size):
                     self.draw.line(((x, y), (new_x, new_y)),
                                    fill=line_color, width=1)
                     not_drawn_lines = 0
