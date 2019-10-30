@@ -128,3 +128,6 @@ class LsystemImage(object):
 
     def set_line_color(self, color) -> None:
         self.line_color = color
+
+    def get_size(self) -> tuple:
+        return self.size
