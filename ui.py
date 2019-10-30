@@ -10,19 +10,35 @@ from utils import decart_to_image_coords, angle_part_of_circle, deg_to_rad, stri
 class LsystemStringGenerator(QObject):
     finishSignal = pyqtSignal()
 
+    def __init__(self, lsystem: Lsystem, parent=None):
+        super().__init__(parent=parent)
+        self.lsystem = lsystem
+        self.iterations = 0
+
     @pyqtSlot()
-    def generate(self, lsystem: Lsystem, iteration: int) -> None:
-        lsystem.update_strings(iteration)
+    def generate(self, iteration: int) -> None:
+        self.lsystem.update_strings(self.iterations)
         self.finishSignal.emit()
+
+    def set_iterations(self, iterations: int) -> None:
+        self.iterations = iterations
 
 
 class LsystemImageDrawer(QObject):
     finishSignal = pyqtSignal()
 
+    def __init__(self, lsystem_image: LsystemImage, parent=None):
+        super().__init__(parent=parent)
+        self.lsystem_image = lsystem_image
+        self.iterations = 0
+
     @pyqtSlot()
-    def draw(self, lsystem_image: LsystemImage, iteration: int) -> None:
-        lsystem_image.update_image(iteration)
+    def draw(self) -> None:
+        self.lsystem_image.update_image(self.iterations)
         self.finishSignal.emit()
+
+    def set_iterations(self, iterations: int) -> None:
+        self.iterations = iterations
 
 
 class Ui_MainWindow(object):
