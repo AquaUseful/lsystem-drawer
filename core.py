@@ -55,12 +55,13 @@ class LsystemImage(object):
     def _make_draw(self) -> None:
         self.draw = Draw(self.image)
 
-    def _draw_lsystem(self) -> None:
+    def _draw_lsystem(self, iteration: int) -> None:
         not_drawn_lines = 0
         x, y = self.start_coords[0], self.start_coords[1]
         angle = self.start_angle
         stack = []
-        for char in lsystem:
+        string = self.lsystem.get_string(iteration)
+        for char in string:
             if char == "F":
                 new_x, new_y = point_on_circle((x, y), step_length, angle)
                 if check_coords((x, y), (new_x, new_y), max_coords):
@@ -91,4 +92,4 @@ class LsystemImage(object):
     def update_image(self, iteration: int) -> None:
         self._make_empty_image()
         self._make_draw()
-        self._draw_lsystem()
+        self._draw_lsystem(iteration)
