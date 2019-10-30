@@ -325,7 +325,7 @@ class Ui_MainWindow(object):
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.initUi()
         self.bg_color = "#000000"
@@ -335,7 +335,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lsystem = Lsystem("lsystem", "", {})
         self.limage = LsystemImage(self.lsystem)
 
-    def initUi(self):
+    def initUi(self) -> None:
         self.setupUi(self)
         self.retranslateUi(self)
         self.spinBox_step.valueChanged.connect(self.update_step_slider)
@@ -389,7 +389,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def update_step_length(self) -> None:
         self.limage.set_step_length(self.spinBox_step_length.value())
 
-    def new(self):
+    def new(self) -> None:
         self.clear_path()
         self.spinBox_angle.setValue(0)
         self.spinBox_plane_div.setValue(2)
@@ -401,7 +401,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.plainTextEdit_rules.clear()
         self.clear_label()
 
-    def save_data(self):
+    def save_data(self) -> None:
         name = self.lineEdit_name.text()
         if not name:
             name = "lsystem"
@@ -417,13 +417,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f.write(initiator + "\n")
             f.write(rules_text + "\n")
 
-    def save(self):
+    def save(self) -> None:
         if self.path is not None:
             self.save_data()
         else:
             self.saveas()
 
-    def saveas(self):
+    def saveas(self) -> None:
         try:
             self.path = self.requset_save_path(
                 "Сохранить l-систему", "l-system files (*.ls)")
@@ -431,7 +431,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except FileNotFoundError:
             return
 
-    def open(self):
+    def open(self) -> None:
         try:
             self.path = self.request_open_path(
                 "Открыть l-систему", "l-system files (*.ls)")
@@ -439,12 +439,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         self.load_data()
 
-    def show_messagebox(self, message):
+    def show_messagebox(self, message) -> None:
         msgbox = QMessageBox(self)
         msgbox.setText(message)
         msgbox.show()
 
-    def load_data(self):
+    def load_data(self) -> None:
         with open(self.path, "r") as f:
             text = f.read()
         lines = text.strip().split("\n")
@@ -476,7 +476,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit_initiator.setText(initiator)
         self.plainTextEdit_rules.setPlainText(rules_text)
 
-    def clear_path(self):
+    def clear_path(self) -> None:
         self.path = None
 
     def request_choice(self, header, request, variants):
@@ -487,52 +487,52 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             raise InterruptedError
 
-    def request_bg_color(self):
+    def request_bg_color(self) -> None:
         try:
             self.bg_color = self.request_color()
         except ValueError:
             return
 
-    def request_line_color(self):
+    def request_line_color(self) -> None:
         try:
             self.line_color = self.request_color()
         except ValueError:
             return
 
-    def request_open_path(self, request, filter):
+    def request_open_path(self, request, filter) -> str:
         path = QFileDialog.getOpenFileName(
             self, request, "", filter)[0]
         if path:
             return path
         raise FileNotFoundError
 
-    def requset_save_path(self, request, filter):
+    def requset_save_path(self, request, filter) -> str:
         path = QFileDialog.getSaveFileName(
             self, request, "", filter)[0]
         if path:
             return path
         raise FileNotFoundError
 
-    def request_color(self):
+    def request_color(self) -> str:
         color = QColorDialog.getColor()
         if color.isValid():
             return color.name()
         else:
             raise ValueError
 
-    def request_bg_color(self):
+    def request_bg_color(self) -> None:
         try:
             self.bg_color = self.request_color()
         except ValueError:
             return
 
-    def request_line_color(self):
+    def request_line_color(self) -> None:
         try:
             self.line_color = self.request_color()
         except ValueError:
             return
 
-    def generate_image(self, scale=1):
+    def generate_image(self, scale=1) -> None:
         if not self.check_values():
             raise ValueError
         size = (self.spinBox_size_x.value() * scale,
@@ -556,20 +556,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         image_params = (size, self.bg_color, draw_params)
         self.image = gen_string_and_draw(string_gen_params, image_params)
 
-    def check_values(self):
+    def check_values(self) -> bool:
         return self.lineEdit_initiator.text() and self.plainTextEdit_rules.toPlainText()
 
-    def get_rule_strings(self):
+    def get_rule_strings(self) -> list:
         text = self.plainTextEdit_rules.toPlainText()
         return text.split("\n")
 
-    def update_step_slider(self):
+    def update_step_slider(self) -> None:
         self.horizontalSlider_step.setValue(self.spinBox_step.value())
 
-    def update_step_spinbox(self):
+    def update_step_spinbox(self) -> None:
         self.spinBox_step.setValue(self.horizontalSlider_step.value())
 
-    def update_label(self):
+    def update_label(self) -> None:
         try:
             self.generate_image()
         except ValueError:
@@ -577,20 +577,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pixmap = image_to_pixmap(self.image)
         self.label_result.setPixmap(pixmap)
 
-    def clear_label(self):
+    def clear_label(self) -> None:
         self.label_result.clear()
 
-    def set_angle_mode(self):
+    def set_angle_mode(self) -> None:
         self.radioButton_angle_mode.setChecked(True)
         self.spinBox_angle.setEnabled(True)
         self.spinBox_plane_div.setEnabled(False)
 
-    def set_plane_div_mode(self):
+    def set_plane_div_mode(self) -> None:
         self.radioButton_div_mode.setChecked(True)
         self.spinBox_angle.setEnabled(False)
         self.spinBox_plane_div.setEnabled(True)
 
-    def save_image(self):
+    def save_image(self) -> None:
         try:
             path = self.requset_save_path("Сохранить", "All files")
         except FileNotFoundError:
