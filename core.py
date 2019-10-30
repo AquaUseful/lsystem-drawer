@@ -13,7 +13,7 @@ class Lsystem(object):
     def set_inititator(self, inititator: str) -> None:
         self.initiator = inititator
 
-    def set_rules(self, rules: Dict) -> None:
+    def set_rules(self, rules: dict) -> None:
         self.rules = rules
 
     def get_initiator(self) -> str:
