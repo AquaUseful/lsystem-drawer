@@ -316,6 +316,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.line_color = "#FFFFFF"
         self.image = None
         self.clear_path()
+        self.lsystem = Lsystem("lsystem", "", {})
+        self.limage = LsystemImage(self.lsystem)
 
     def initUi(self):
         self.setupUi(self)
@@ -335,6 +337,41 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_save.triggered.connect(self.save)
         self.action_saveas.triggered.connect(self.saveas)
         self.action_exit.triggered.connect(exit)
+
+    def update_name(self) -> None:
+        self.lsystem.set_name(self.lineEdit_name.text())
+
+    def update_inititator(self) -> None:
+        self.lsystem.set_inititator(self.lineEdit_initiator.text())
+
+    def update_rules(self) -> None:
+        rules_dict = strings_to_dict(
+            self.plainTextEdit_rules.toPlainText().split("\n"), " ")
+
+    def update_size(self) -> None:
+        self.limage.set_size(self.spinBox_size_x.value(),
+                             self.spinBox_size_y.value())
+
+    def update_start_coords(self) -> None:
+        image_x, image_y = decart_to_image_coords(
+            (self.spinBox_start_x.value(), self.spinBox_start_y.value()),
+            self.limage.get_size())
+        self.limage.set_start_coords(image_x, image_y)
+
+    def update_start_angle(self) -> None:
+        rad_angle = deg_to_rad(self.spinBox_start_angle.value())
+        self.limage.set_start_angle(rad_angle)
+
+    def update_rot_angle_angle(self) -> None:
+        rad_angle = deg_to_rad(self.spinBox_angle.value())
+        self.limage.set_rot_angle(rad_angle)
+
+    def update_rot_angle_div(self) -> None:
+        rad_angle = angle_part_of_circle(self.spinBox_plane_div.value())
+        self.limage.set_rot_angle(rad_angle)
+
+    def update_step_length(self) -> None:
+        self.limage.set_step_length(self.spinBox_step_length.value())
 
     def new(self):
         self.clear_path()
