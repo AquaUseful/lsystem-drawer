@@ -1,3 +1,8 @@
+from math import pi, sin, cos
+from PIL import ImageQt
+from PyQt5.QtGui import QPixmap
+
+
 def image_to_pixmap(image):
     return QPixmap.fromImage(ImageQt.ImageQt(image))
 
