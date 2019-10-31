@@ -322,10 +322,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.clear_path()
         self.lsystem = Lsystem("lsystem", "", {})
         self.limage = LsystemImage(self.lsystem)
-        self.image_drawer = LsystemImageDrawer(self.limage, self)
+        self.image_drawer = LsystemImageDrawer(self.limage)
         self.image_drawer.finishSignal.connect(self.update_label)
-        self.work_thread = QThread(self)
-        self.work_thread.started.connect(partial(self.image_drawer.work))
+        self.work_thread = QThread()
+        self.work_thread.started.connect(self.image_drawer.work)
+        self.image_drawer.moveToThread(self.work_thread)
+        self.image_drawer.finishSignal.connect(self.work_thread.quit)
+        self.work_thread.setTerminationEnabled(True)
 
     def initUi(self) -> None:
         self.setupUi(self)
@@ -548,8 +551,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
 
     def generate_result(self) -> None:
-        if self.work_thread.isRunning:
-            self.work_thread.terminate()
         self.work_thread.start()
 
     def check_values(self) -> bool:
