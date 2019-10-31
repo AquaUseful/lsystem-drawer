@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QColorDialog, QFileDialog, QInputDialog, QMessageBox
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
-from PIL.Image import Image
+from PIL import Image
 from core import LsystemImage, Lsystem
 from utils import decart_to_image_coords, angle_part_of_circle, deg_to_rad, strings_to_dict, image_to_pixmap
 from functools import partial
@@ -321,14 +321,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.image = None
         self.clear_path()
         self.lsystem = Lsystem("lsystem", "", {})
+
         self.limage = LsystemImage(self.lsystem)
         self.image_drawer = LsystemImageDrawer(self.limage)
         self.image_drawer.finishSignal.connect(self.update_label)
-        self.work_thread = QThread()
-        self.work_thread.started.connect(self.image_drawer.work)
-        self.image_drawer.moveToThread(self.work_thread)
-        self.image_drawer.finishSignal.connect(self.work_thread.quit)
-        self.work_thread.setTerminationEnabled(True)
+        self.draw_thread = QThread()
+        self.draw_thread.started.connect(self.image_drawer.work)
+        self.image_drawer.moveToThread(self.draw_thread)
+        self.image_drawer.finishSignal.connect(self.draw_thread.quit)
+
+        self.scaled_limage = LsystemImage(self.lsystem)
+        self.scaled_image_drawer = LsystemImageDrawer(self.scaled_limage)
+        self.scaled_image_drawer.finishSignal.connect(self.save_image)
+        self.scaled_draw_thread = QThread()
+        self.scaled_draw_thread.started.connect(self.scaled_image_drawer.work)
+        self.scaled_image_drawer.moveToThread(self.scaled_draw_thread)
+        self.scaled_image_drawer.finishSignal.connect(
+            self.scaled_draw_thread.quit)
 
     def initUi(self) -> None:
         self.setupUi(self)
@@ -342,29 +351,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_clear.clicked.connect(self.clear_label)
         self.radioButton_angle_mode.clicked.connect(self.set_angle_mode)
         self.radioButton_div_mode.clicked.connect(self.set_plane_div_mode)
-        self.pushButton_save_image.clicked.connect(self.save_image)
+        self.pushButton_save_image.clicked.connect(self.generate_scaled_result)
         self.action_open.triggered.connect(self.open)
         self.action_new.triggered.connect(self.new)
         self.action_save.triggered.connect(self.save)
         self.action_saveas.triggered.connect(self.saveas)
         self.action_exit.triggered.connect(exit)
-        self.spinBox_angle.valueChanged.connect(self.update_rot_angle_angle)
-        self.spinBox_plane_div.valueChanged.connect(self.update_rot_angle_div)
 
     def update_lsystem_params(self) -> None:
         self._update_name()
         self._update_inititator()
         self._update_rules()
 
-    def update_limage_params(self) -> None:
-        self._update_size()
-        self._update_start_coords()
-        self._update_start_angle()
-        self._update_step_length()
+    def update_limage_params(self, limage: LsystemImage, scale: int = 1) -> None:
+        self._update_size(limage, scale)
+        self._update_start_coords(limage, scale)
+        self._update_start_angle(limage)
+        if self.radioButton_angle_mode.isChecked():
+            self._update_rot_angle_angle(limage)
+        else:
+            self._update_rot_angle_div(limage)
+        self._update_step_length(limage, scale)
 
-    def update_drawer_params(self) -> None:
-        self._update_iteration()
-        self._update_scale()
+    def update_drawer_params(self, drawer: LsystemImageDrawer) -> None:
+        self._update_iteration(drawer)
 
     def _update_name(self) -> None:
         self.lsystem.set_name(self.lineEdit_name.text())
@@ -380,36 +390,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         self.lsystem.set_rules(rules_dict)
 
-    def _update_size(self) -> None:
-        self.limage.set_size(self.spinBox_size_x.value(),
-                             self.spinBox_size_y.value())
+    def _update_size(self, limage: LsystemImage, scale: int) -> None:
+        limage.set_size(self.spinBox_size_x.value() * scale,
+                        self.spinBox_size_y.value() * scale)
 
-    def _update_start_coords(self) -> None:
+    def _update_start_coords(self, limage: LsystemImage, scale: int) -> None:
         image_x, image_y = decart_to_image_coords(
-            (self.spinBox_start_x.value(), self.spinBox_start_y.value()),
-            self.limage.get_size())
-        self.limage.set_start_coords(image_x, image_y)
+            (self.spinBox_start_x.value() * scale,
+             self.spinBox_start_y.value() * scale),
+            limage.get_size())
+        limage.set_start_coords(image_x, image_y)
 
-    def _update_start_angle(self) -> None:
+    def _update_start_angle(self, limage: LsystemImage) -> None:
         rad_angle = deg_to_rad(self.spinBox_start_angle.value())
-        self.limage.set_start_angle(rad_angle)
+        limage.set_start_angle(rad_angle)
 
-    def update_rot_angle_angle(self) -> None:
+    def _update_rot_angle_angle(self, limage: LsystemImage) -> None:
         rad_angle = deg_to_rad(self.spinBox_angle.value())
-        self.limage.set_rot_angle(rad_angle)
+        limage.set_rot_angle(rad_angle)
 
-    def update_rot_angle_div(self) -> None:
+    def _update_rot_angle_div(self, limage: LsystemImage) -> None:
         rad_angle = angle_part_of_circle(self.spinBox_plane_div.value())
-        self.limage.set_rot_angle(rad_angle)
+        limage.set_rot_angle(rad_angle)
 
-    def _update_step_length(self) -> None:
-        self.limage.set_step_length(self.spinBox_step_length.value())
+    def _update_step_length(self, limage: LsystemImage, scale: int) -> None:
+        limage.set_step_length(self.spinBox_step_length.value() * scale)
 
-    def _update_iteration(self) -> None:
-        self.image_drawer.set_iteration(self.spinBox_step.value())
-
-    def _update_scale(self) -> None:
-        self.image_drawer.set_scale(self.spinBox_scale.value())
+    def _update_iteration(self, drawer: LsystemImageDrawer) -> None:
+        drawer.set_iteration(self.spinBox_step.value())
 
     def new(self) -> None:
         self.clear_path()
@@ -556,9 +564,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def generate_result(self) -> None:
         self.update_lsystem_params()
-        self.update_limage_params()
-        self.update_drawer_params()
-        self.work_thread.start()
+        self.update_limage_params(self.limage)
+        self.update_drawer_params(self.image_drawer)
+        self.draw_thread.start()
 
     def check_values(self) -> bool:
         return self.lineEdit_initiator.text() and self.plainTextEdit_rules.toPlainText()
@@ -593,10 +601,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def save_image(self) -> None:
         try:
-            path = self.requset_save_path("Сохранить", "All files")
+            path = self.requset_save_path("Сохранить", "All files (*.*)")
         except FileNotFoundError:
             return
-        scale = self.spinBox_scale.value()
-        self.generate_image(scale)
-        img = self.image.convert("RGB")
+        img = self.scaled_limage.get_image()
+        img = img.convert("RGBA")
+        img.show()
         img.save(path)
+
+    def generate_scaled_result(self) -> None:
+        scale = self.spinBox_scale.value()
+        print(scale)
+        self.update_lsystem_params()
+        self.update_limage_params(self.scaled_limage, scale)
+        self.update_drawer_params(self.scaled_image_drawer)
+        self.scaled_draw_thread.start()

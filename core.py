@@ -69,7 +69,6 @@ class LsystemImage(object):
         x, y = self.start_coords[0], self.start_coords[1]
         angle = self.start_angle
         stack = []
-        print(self.string)
         for char in self.string:
             if char == "F":
                 new_x, new_y = point_on_circle((x, y), self.step_length, angle)
