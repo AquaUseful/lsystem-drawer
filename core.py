@@ -22,7 +22,6 @@ class Lsystem(object):
     def get_initiator(self) -> str:
         return self.initiator
 
-
     def set_name(self, name: str) -> None:
         self.name = name
 
