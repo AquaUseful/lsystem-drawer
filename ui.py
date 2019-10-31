@@ -348,27 +348,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_save.triggered.connect(self.save)
         self.action_saveas.triggered.connect(self.saveas)
         self.action_exit.triggered.connect(exit)
-        self.lineEdit_name.textChanged.connect(self.update_name)
-        self.lineEdit_initiator.textChanged.connect(self.update_inititator)
-        self.plainTextEdit_rules.textChanged.connect(self.update_rules)
-        self.spinBox_size_x.valueChanged.connect(self.update_size)
-        self.spinBox_size_y.valueChanged.connect(self.update_size)
-        self.spinBox_start_x.valueChanged.connect(self.update_start_coords)
-        self.spinBox_start_y.valueChanged.connect(self.update_start_coords)
-        self.spinBox_start_angle.valueChanged.connect(self.update_start_angle)
         self.spinBox_angle.valueChanged.connect(self.update_rot_angle_angle)
         self.spinBox_plane_div.valueChanged.connect(self.update_rot_angle_div)
-        self.spinBox_step_length.valueChanged.connect(self.update_step_length)
-        self.spinBox_step.valueChanged.connect(self.update_iteration)
-        self.spinBox_scale.valueChanged.connect(self.update_scale)
 
-    def update_name(self) -> None:
+    def update_lsystem_params(self) -> None:
+        self._update_name()
+        self._update_inititator()
+        self._update_rules()
+
+    def update_limage_params(self) -> None:
+        self._update_size()
+        self._update_start_coords()
+        self._update_start_angle()
+        self._update_step_length()
+
+    def update_drawer_params(self) -> None:
+        self._update_iteration()
+        self._update_scale()
+
+    def _update_name(self) -> None:
         self.lsystem.set_name(self.lineEdit_name.text())
 
-    def update_inititator(self) -> None:
+    def _update_inititator(self) -> None:
         self.lsystem.set_inititator(self.lineEdit_initiator.text())
 
-    def update_rules(self) -> None:
+    def _update_rules(self) -> None:
         try:
             rules_dict = strings_to_dict(
                 self.plainTextEdit_rules.toPlainText().split("\n"), " ")
@@ -376,17 +380,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         self.lsystem.set_rules(rules_dict)
 
-    def update_size(self) -> None:
+    def _update_size(self) -> None:
         self.limage.set_size(self.spinBox_size_x.value(),
                              self.spinBox_size_y.value())
 
-    def update_start_coords(self) -> None:
+    def _update_start_coords(self) -> None:
         image_x, image_y = decart_to_image_coords(
             (self.spinBox_start_x.value(), self.spinBox_start_y.value()),
             self.limage.get_size())
         self.limage.set_start_coords(image_x, image_y)
 
-    def update_start_angle(self) -> None:
+    def _update_start_angle(self) -> None:
         rad_angle = deg_to_rad(self.spinBox_start_angle.value())
         self.limage.set_start_angle(rad_angle)
 
@@ -398,13 +402,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         rad_angle = angle_part_of_circle(self.spinBox_plane_div.value())
         self.limage.set_rot_angle(rad_angle)
 
-    def update_step_length(self) -> None:
+    def _update_step_length(self) -> None:
         self.limage.set_step_length(self.spinBox_step_length.value())
 
-    def update_iteration(self) -> None:
+    def _update_iteration(self) -> None:
         self.image_drawer.set_iteration(self.spinBox_step.value())
 
-    def update_scale(self) -> None:
+    def _update_scale(self) -> None:
         self.image_drawer.set_scale(self.spinBox_scale.value())
 
     def new(self) -> None:
@@ -551,6 +555,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
 
     def generate_result(self) -> None:
+        self.update_lsystem_params()
+        self.update_limage_params()
+        self.update_drawer_params()
         self.work_thread.start()
 
     def check_values(self) -> bool:
