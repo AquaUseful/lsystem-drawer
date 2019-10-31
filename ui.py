@@ -5,23 +5,7 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 from PIL.Image import Image
 from core import LsystemImage, Lsystem
 from utils import decart_to_image_coords, angle_part_of_circle, deg_to_rad, strings_to_dict, image_to_pixmap
-
-
-class LsystemStringGenerator(QObject):
-    finishSignal = pyqtSignal()
-
-    def __init__(self, lsystem: Lsystem, parent=None):
-        super().__init__(parent=parent)
-        self.lsystem = lsystem
-        self.iterations = 0
-
-    @pyqtSlot()
-    def generate(self, iteration: int) -> None:
-        self.lsystem.update_strings(self.iterations)
-        self.finishSignal.emit()
-
-    def set_iterations(self, iterations: int) -> None:
-        self.iterations = iterations
+from functools import partial
 
 
 class LsystemImageDrawer(QObject):
@@ -30,15 +14,19 @@ class LsystemImageDrawer(QObject):
     def __init__(self, lsystem_image: LsystemImage, parent=None):
         super().__init__(parent=parent)
         self.lsystem_image = lsystem_image
-        self.iterations = 0
+        self.iteration = 0
 
     @pyqtSlot()
-    def draw(self) -> None:
-        self.lsystem_image.update_image(self.iterations)
+    def work(self) -> None:
+        print("started string generation")
+        self.lsystem_image.update_image(self.iteration)
         self.finishSignal.emit()
 
-    def set_iterations(self, iterations: int) -> None:
-        self.iterations = iterations
+    def set_iteration(self, iteration: int) -> None:
+        self.iteration = iteration
+
+    def set_scale(self, scale: int) -> None:
+        self.scale = scale
 
 
 class Ui_MainWindow(object):
@@ -334,6 +322,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.clear_path()
         self.lsystem = Lsystem("lsystem", "", {})
         self.limage = LsystemImage(self.lsystem)
+        self.image_drawer = LsystemImageDrawer(self.limage, self)
+        self.image_drawer.finishSignal.connect(self.update_label)
+        self.work_thread = QThread(self)
+        self.work_thread.started.connect(partial(self.image_drawer.work))
 
     def initUi(self) -> None:
         self.setupUi(self)
@@ -341,7 +333,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.spinBox_step.valueChanged.connect(self.update_step_slider)
         self.horizontalSlider_step.valueChanged.connect(
             self.update_step_spinbox)
-        self.pushButton_update.clicked.connect(self.update_label)
+        self.pushButton_update.clicked.connect(self.generate_result)
         self.pushButton_ch_bg_color.clicked.connect(self.request_bg_color)
         self.pushButton_ch_line_color.clicked.connect(self.request_line_color)
         self.pushButton_clear.clicked.connect(self.clear_label)
@@ -353,6 +345,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_save.triggered.connect(self.save)
         self.action_saveas.triggered.connect(self.saveas)
         self.action_exit.triggered.connect(exit)
+        self.lineEdit_name.textChanged.connect(self.update_name)
+        self.lineEdit_initiator.textChanged.connect(self.update_inititator)
+        self.plainTextEdit_rules.textChanged.connect(self.update_rules)
+        self.spinBox_size_x.valueChanged.connect(self.update_size)
+        self.spinBox_size_y.valueChanged.connect(self.update_size)
+        self.spinBox_start_x.valueChanged.connect(self.update_start_coords)
+        self.spinBox_start_y.valueChanged.connect(self.update_start_coords)
+        self.spinBox_start_angle.valueChanged.connect(self.update_start_angle)
+        self.spinBox_angle.valueChanged.connect(self.update_rot_angle_angle)
+        self.spinBox_plane_div.valueChanged.connect(self.update_rot_angle_div)
+        self.spinBox_step_length.valueChanged.connect(self.update_step_length)
+        self.spinBox_step.valueChanged.connect(self.update_iteration)
+        self.spinBox_scale.valueChanged.connect(self.update_scale)
 
     def update_name(self) -> None:
         self.lsystem.set_name(self.lineEdit_name.text())
@@ -361,8 +366,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lsystem.set_inititator(self.lineEdit_initiator.text())
 
     def update_rules(self) -> None:
-        rules_dict = strings_to_dict(
-            self.plainTextEdit_rules.toPlainText().split("\n"), " ")
+        try:
+            rules_dict = strings_to_dict(
+                self.plainTextEdit_rules.toPlainText().split("\n"), " ")
+        except IndexError:
+            return
+        self.lsystem.set_rules(rules_dict)
 
     def update_size(self) -> None:
         self.limage.set_size(self.spinBox_size_x.value(),
@@ -388,6 +397,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def update_step_length(self) -> None:
         self.limage.set_step_length(self.spinBox_step_length.value())
+
+    def update_iteration(self) -> None:
+        self.image_drawer.set_iteration(self.spinBox_step.value())
+
+    def update_scale(self) -> None:
+        self.image_drawer.set_scale(self.spinBox_scale.value())
 
     def new(self) -> None:
         self.clear_path()
@@ -532,29 +547,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except ValueError:
             return
 
-    def generate_image(self, scale=1) -> None:
-        if not self.check_values():
-            raise ValueError
-        size = (self.spinBox_size_x.value() * scale,
-                self.spinBox_size_y.value() * scale)
-        start_coords = (self.spinBox_start_x.value() * scale,
-                        self.spinBox_start_y.value() * scale)
-        start_coords = decart_to_image_coords(start_coords, size)
-        if self.radioButton_div_mode.isChecked():
-            rotation_angle = angle_part_of_circle(
-                self.spinBox_plane_div.value())
-        else:
-            rotation_angle = deg_to_rad(self.spinBox_angle.value())
-        start_angle = deg_to_rad(self.spinBox_start_angle.value())
-        rules = strings_to_dict(self.get_rule_strings(), " ")
-        step_length = self.spinBox_step_length.value() * scale
-        initiator = self.lineEdit_initiator.text()
-        iterations = self.horizontalSlider_step.value()
-        string_gen_params = (initiator, rules, iterations)
-        draw_params = (start_coords, start_angle, rotation_angle,
-                       step_length, self.line_color)
-        image_params = (size, self.bg_color, draw_params)
-        self.image = gen_string_and_draw(string_gen_params, image_params)
+    def generate_result(self) -> None:
+        if self.work_thread.isRunning:
+            self.work_thread.terminate()
+        self.work_thread.start()
 
     def check_values(self) -> bool:
         return self.lineEdit_initiator.text() and self.plainTextEdit_rules.toPlainText()
@@ -570,11 +566,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.spinBox_step.setValue(self.horizontalSlider_step.value())
 
     def update_label(self) -> None:
-        try:
-            self.generate_image()
-        except ValueError:
-            return
-        pixmap = image_to_pixmap(self.image)
+        image = self.limage.get_image()
+        pixmap = image_to_pixmap(image)
         self.label_result.setPixmap(pixmap)
 
     def clear_label(self) -> None:
