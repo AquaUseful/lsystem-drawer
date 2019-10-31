@@ -312,7 +312,44 @@ class Ui_MainWindow(object):
         self.action_exit.setText(_translate("MainWindow", "Выход"))
 
 
-class MainWindow(QMainWindow, Ui_MainWindow):
+class BasicUiUtils(object):
+
+    def request_color(self) -> str:
+        color = QColorDialog.getColor()
+        if color.isValid():
+            return color.name()
+        else:
+            raise ValueError
+
+    def request_open_path(self, request, filter) -> str:
+        path = QFileDialog.getOpenFileName(
+            self, request, "", filter)[0]
+        if path:
+            return path
+        raise FileNotFoundError
+
+    def requset_save_path(self, request, filter) -> str:
+        path = QFileDialog.getSaveFileName(
+            self, request, "", filter)[0]
+        if path:
+            return path
+        raise FileNotFoundError
+
+    def show_messagebox(self, message) -> None:
+        msgbox = QMessageBox(self)
+        msgbox.setText(message)
+        msgbox.show()
+
+    def request_choice(self, header, request, variants):
+        val, ok = QInputDialog.getItem(
+            self, header, request, variants, editable=False)
+        if ok:
+            return val
+        else:
+            raise InterruptedError
+
+
+class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.initUi()
@@ -469,11 +506,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         self.load_data()
 
-    def show_messagebox(self, message) -> None:
-        msgbox = QMessageBox(self)
-        msgbox.setText(message)
-        msgbox.show()
-
     def load_data(self) -> None:
         with open(self.path, "r") as f:
             text = f.read()
@@ -509,58 +541,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def clear_path(self) -> None:
         self.path = None
 
-    def request_choice(self, header, request, variants):
-        val, ok = QInputDialog.getItem(
-            self, header, request, variants, editable=False)
-        if ok:
-            return val
-        else:
-            raise InterruptedError
+    def request_line_color(self) -> None:
+        try:
+            color = self.request_color()
+        except ValueError:
+            return
+        self.limage.set_line_color(color)
+        self.scaled_limage.set_line_color(color)
 
     def request_bg_color(self) -> None:
         try:
-            self.bg_color = self.request_color()
+            color = self.request_color()
         except ValueError:
             return
-
-    def request_line_color(self) -> None:
-        try:
-            self.line_color = self.request_color()
-        except ValueError:
-            return
-
-    def request_open_path(self, request, filter) -> str:
-        path = QFileDialog.getOpenFileName(
-            self, request, "", filter)[0]
-        if path:
-            return path
-        raise FileNotFoundError
-
-    def requset_save_path(self, request, filter) -> str:
-        path = QFileDialog.getSaveFileName(
-            self, request, "", filter)[0]
-        if path:
-            return path
-        raise FileNotFoundError
-
-    def request_color(self) -> str:
-        color = QColorDialog.getColor()
-        if color.isValid():
-            return color.name()
-        else:
-            raise ValueError
-
-    def request_bg_color(self) -> None:
-        try:
-            self.bg_color = self.request_color()
-        except ValueError:
-            return
-
-    def request_line_color(self) -> None:
-        try:
-            self.line_color = self.request_color()
-        except ValueError:
-            return
+        self.limage.set_bg_color(color)
+        self.scaled_limage.set_bg_color(color)
 
     def generate_result(self) -> None:
         self.update_lsystem_params()
