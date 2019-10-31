@@ -1,7 +1,8 @@
 from utils import point_on_circle, check_coords
-from PIL.Image import Image
+from PIL import Image
 from PIL.ImageDraw import Draw, ImageDraw
 from math import pi
+from itertools import chain
 
 
 class Lsystem(object):
@@ -9,7 +10,8 @@ class Lsystem(object):
         self.name = name
         self.initiator = inititator
         self.rules = rules
-        self.strings = []
+        self.string = inititator
+        self.last_req = 0
 
     def set_inititator(self, inititator: str) -> None:
         self.initiator = inititator
@@ -20,11 +22,6 @@ class Lsystem(object):
     def get_initiator(self) -> str:
         return self.initiator
 
-    def get_strings(self):
-        pass
-
-    def get_string(self, iteration):
-        return self.strings[iteration]
 
     def set_name(self, name: str) -> None:
         self.name = name
@@ -32,11 +29,16 @@ class Lsystem(object):
     def get_name(self) -> str:
         return self.name
 
-    def update_strings(self, iterations: int) -> None:
-        strings = [self.initiator]
-        for it in range(iterations):
-            strings.append(str(
-                map(lambda char: self.rules[char] if char in self.rules else char, strings[it])))
+    def generate_string(self, iteration: int) -> str:
+        if iteration == self.last_req:
+            return self.string
+        self.last_req = iteration
+        string = self.initiator
+        for _ in range(iteration):
+            string = chain(
+                *map(lambda char: self.rules[char] if char in self.rules else char, string))
+        self.string = "".join(string)
+        return self.string
 
 
 class LsystemImage(object):
@@ -63,28 +65,28 @@ class LsystemImage(object):
     def _make_draw(self) -> None:
         self.draw = Draw(self.image)
 
-    def _draw_lsystem(self, iteration: int) -> None:
+    def _draw_lsystem(self) -> None:
         not_drawn_lines = 0
         x, y = self.start_coords[0], self.start_coords[1]
         angle = self.start_angle
         stack = []
-        string = self.lsystem.get_string(iteration)
-        for char in string:
+        print(self.string)
+        for char in self.string:
             if char == "F":
-                new_x, new_y = point_on_circle((x, y), step_length, angle)
+                new_x, new_y = point_on_circle((x, y), self.step_length, angle)
                 if check_coords((x, y), (new_x, new_y), self.size):
                     self.draw.line(((x, y), (new_x, new_y)),
-                                   fill=line_color, width=1)
+                                   fill=self.line_color, width=1)
                     not_drawn_lines = 0
                 else:
                     not_drawn_lines += 1
                 x, y = new_x, new_y
             elif char == "f":
-                x, y = point_on_circle((x, y), step_length, angle)
+                x, y = point_on_circle((x, y), self.step_length, angle)
             elif char == "+":
-                angle += self.rotation_angle
+                angle += self.rot_angle
             elif char == "-":
-                angle -= self.rotation_angle
+                angle -= self.rot_angle
             elif char == "|":
                 angle += pi
             elif char == "[":
@@ -98,9 +100,10 @@ class LsystemImage(object):
         return self.image
 
     def update_image(self, iteration: int) -> None:
+        self.string = self.lsystem.generate_string(iteration)
         self._make_empty_image()
         self._make_draw()
-        self._draw_lsystem(iteration)
+        self._draw_lsystem()
 
     def set_size(self, size: tuple) -> None:
         self.size = size
