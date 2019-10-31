@@ -1,5 +1,5 @@
 from math import pi, sin, cos
-from PIL import ImageQt
+from PIL import Image, ImageQt
 from PyQt5.QtGui import QPixmap
 
 
