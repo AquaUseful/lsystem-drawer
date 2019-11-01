@@ -622,7 +622,6 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
             return
         img = self.scaled_limage.get_image()
         img = img.convert("RGBA")
-        img.show()
         img.save(path)
 
     def generate_scaled_result(self) -> None:
