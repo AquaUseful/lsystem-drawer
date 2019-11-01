@@ -414,6 +414,7 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.action_saveas.triggered.connect(self.saveas)
         self.action_exit.triggered.connect(exit)
         self.action_open_db_manager.triggered.connect(self.db_manager.show)
+        self.action_save_to_db.triggered.connect(self.save_to_db)
 
     def update_lsystem_params(self) -> None:
         self._update_name()
@@ -632,6 +633,36 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.update_drawer_params(self.scaled_image_drawer)
         self.scaled_draw_thread.start()
 
+    def save_to_db(self):
+        name = self.lineEdit_name.text()
+        if not name:
+            name = "lsystem"
+        if self.radioButton_angle_mode.isChecked():
+            angle_div = self.spinBox_angle.value()
+        else:
+            angle_div = self.spinBox_plane_div.value()
+        initiator = self.lineEdit_initiator.text()
+        rules_text = self.plainTextEdit_rules.toPlainText()
+        self.db_manager.create_cursor()
+        id_with_name = self.db_manager.execute_query_fetchone(
+            f"SELECT id FROM lsystems WHERE name = '{name}'")
+        print(id_with_name)
+        if id_with_name:
+            ans = QMessageBox.question(self, "Перезапись",
+                                       "Такая система уже сохранена в БД, перезаписать?",
+                                       QMessageBox.Yes, QMessageBox.No)
+            if ans == QMessageBox.Yes:
+                self.db_manager.execute_query(f"""UPDATE lsystems
+                SET initiator = '{initiator}', rules = '{rules_text}'
+                WHERE id = {id_with_name[0]}""")
+            else:
+                return
+        else:
+            self.db_manager.execute_query(f"""INSERT INTO lsystems(name, initiator, rules) 
+                VALUES('{name}', '{initiator}', '{rules_text}')""")
+        self.db_manager.close_cursor()
+        self.db_manager.commit_changes()
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -709,6 +740,7 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
         else:
             self.create_db()
         self.initUi()
+        self.filter_name()
 
     def initUi(self):
         self.setupUi(self)
@@ -722,7 +754,7 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
         self.create_cursor()
         self.execute_query("""CREATE TABLE "lsystems" (
 	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-	"name"	TEXT NOT NULL,
+	"name"	TEXT NOT NULL UNIQUE,
 	"initiator"	INTEGER NOT NULL,
 	"rules"	INTEGER NOT NULL
     );""")
@@ -794,3 +826,6 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
             f"DELETE from lsystems WHERE id in ({', '.join(ids)})")
         self.close_cursor()
         self.commit_changes()
+
+    def load_selected(self):
+        pass
