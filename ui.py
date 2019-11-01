@@ -643,6 +643,12 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
             angle_div = self.spinBox_plane_div.value()
         initiator = self.lineEdit_initiator.text()
         rules_text = self.plainTextEdit_rules.toPlainText()
+        if self.radioButton_angle_mode.isChecked():
+            rot_angle = self.spinBox_angle.value()
+            plane_div = ""
+        else:
+            rot_angle = ""
+            plane_div = self.spinBox_plane_div.value()
         self.db_manager.create_cursor()
         id_with_name = self.db_manager.execute_query_fetchone(
             f"SELECT id FROM lsystems WHERE name = '{name}'")
@@ -653,15 +659,19 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
                                        QMessageBox.Yes, QMessageBox.No)
             if ans == QMessageBox.Yes:
                 self.db_manager.execute_query(f"""UPDATE lsystems
-                SET initiator = '{initiator}', rules = '{rules_text}'
+                SET initiator = '{initiator}', rules = '{rules_text}', \
+                    rot_angle = '{rot_angle}', plane_div = '{plane_div}'
                 WHERE id = {id_with_name[0]}""")
             else:
                 return
         else:
-            self.db_manager.execute_query(f"""INSERT INTO lsystems(name, initiator, rules) 
-                VALUES('{name}', '{initiator}', '{rules_text}')""")
+            self.db_manager.execute_query(f"""INSERT INTO lsystems(name, initiator, rules, rot_angle, plane_div) \
+                VALUES('{name}', '{initiator}', '{rules_text}', '{rot_angle}', '{plane_div}')""")
         self.db_manager.close_cursor()
         self.db_manager.commit_changes()
+
+    def closeEvent(self, event):
+        exit()
 
 
 class Ui_Form(object):
@@ -758,8 +768,10 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
 	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 	"name"	TEXT NOT NULL UNIQUE,
 	"initiator"	INTEGER NOT NULL,
-	"rules"	INTEGER NOT NULL
-    );""")
+	"rules"	INTEGER NOT NULL,
+	"rot_angle"	INTEGER,
+	"plane_div"	INTEGER
+);""")
         self.close_cursor()
 
     def get_col_names(self):
@@ -835,9 +847,15 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
         lsys_id = min(self.tableWidget.item(i, 0).text() for i in rows)
         self.create_cursor()
         print(id)
-        name, initiator, rules = self.execute_query_fetchone(
-            f"SELECT name, initiator, rules FROM lsystems WHERE id = '{lsys_id}'")
+        name, initiator, rules, rot_angle, plane_div = self.execute_query_fetchone(
+            f"SELECT name, initiator, rules, rot_angle, plane_div FROM lsystems WHERE id = '{lsys_id}'")
         self.close_cursor()
         self.main_form.lineEdit_name.setText(name)
         self.main_form.lineEdit_initiator.setText(initiator)
         self.main_form.plainTextEdit_rules.setPlainText(rules)
+        if rot_angle:
+            self.main_form.set_angle_mode()
+            self.main_form.spinBox_angle.setValue(int(rot_angle))
+        else:
+            self.main_form.set_plane_div_mode()
+            self.main_form.spinBox_plane_div.setValue(int(plane_div))
