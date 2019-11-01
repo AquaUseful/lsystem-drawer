@@ -1,11 +1,15 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QColorDialog, QFileDialog, QInputDialog, QMessageBox
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, \
+    QColorDialog, QFileDialog, QInputDialog, QMessageBox, QLabel, QTableWidgetItem
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot, Qt
 from PIL import Image
 from core import LsystemImage, Lsystem
-from utils import decart_to_image_coords, angle_part_of_circle, deg_to_rad, strings_to_dict, image_to_pixmap
+from utils import decart_to_image_coords, angle_part_of_circle, \
+    deg_to_rad, strings_to_dict, image_to_pixmap
 from functools import partial
+from os.path import isfile
+import sqlite3
 
 
 class LsystemImageDrawer(QObject):
@@ -240,6 +244,8 @@ class Ui_MainWindow(object):
         self.menubar.setObjectName("menubar")
         self.menu = QtWidgets.QMenu(self.menubar)
         self.menu.setObjectName("menu")
+        self.menu_2 = QtWidgets.QMenu(self.menubar)
+        self.menu_2.setObjectName("menu_2")
         MainWindow.setMenuBar(self.menubar)
         self.action_new = QtWidgets.QAction(MainWindow)
         self.action_new.setObjectName("action_new")
@@ -251,6 +257,10 @@ class Ui_MainWindow(object):
         self.action_saveas.setObjectName("action_saveas")
         self.action_exit = QtWidgets.QAction(MainWindow)
         self.action_exit.setObjectName("action_exit")
+        self.action_open_db_manager = QtWidgets.QAction(MainWindow)
+        self.action_open_db_manager.setObjectName("action_open_db_manager")
+        self.action_save_to_db = QtWidgets.QAction(MainWindow)
+        self.action_save_to_db.setObjectName("action_save_to_db")
         self.menu.addAction(self.action_new)
         self.menu.addSeparator()
         self.menu.addAction(self.action_open)
@@ -259,15 +269,17 @@ class Ui_MainWindow(object):
         self.menu.addAction(self.action_saveas)
         self.menu.addSeparator()
         self.menu.addAction(self.action_exit)
+        self.menu_2.addAction(self.action_open_db_manager)
+        self.menu_2.addAction(self.action_save_to_db)
         self.menubar.addAction(self.menu.menuAction())
+        self.menubar.addAction(self.menu_2.menuAction())
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate(
-            "MainWindow", "L-системы: новый уровень"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "lsystem drawer"))
         self.groupBox.setTitle(_translate("MainWindow", "Параметры"))
         self.label_3.setText(_translate("MainWindow", "Угол поворота"))
         self.label_9.setText(_translate(
@@ -303,6 +315,7 @@ class Ui_MainWindow(object):
         self.groupBox_2.setTitle(_translate("MainWindow", "Результат"))
         self.label_result.setText(_translate("MainWindow", "TextLabel"))
         self.menu.setTitle(_translate("MainWindow", "Файл"))
+        self.menu_2.setTitle(_translate("MainWindow", "База данных"))
         self.action_new.setText(_translate("MainWindow", "Новая система"))
         self.action_open.setText(_translate(
             "MainWindow", "Загрузить из файла..."))
@@ -310,6 +323,10 @@ class Ui_MainWindow(object):
         self.action_saveas.setText(_translate(
             "MainWindow", "Сохранить как..."))
         self.action_exit.setText(_translate("MainWindow", "Выход"))
+        self.action_open_db_manager.setText(
+            _translate("MainWindow", "Загрузить из базы.."))
+        self.action_save_to_db.setText(
+            _translate("MainWindow", "Сохранить в базу"))
 
 
 class BasicUiUtils(object):
@@ -352,7 +369,6 @@ class BasicUiUtils(object):
 class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.initUi()
         self.bg_color = "#000000"
         self.line_color = "#FFFFFF"
         self.image = None
@@ -376,6 +392,9 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.scaled_image_drawer.finishSignal.connect(
             self.scaled_draw_thread.quit)
 
+        self.db_manager = Window_db()
+        self.initUi()
+
     def initUi(self) -> None:
         self.setupUi(self)
         self.retranslateUi(self)
@@ -394,6 +413,7 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.action_save.triggered.connect(self.save)
         self.action_saveas.triggered.connect(self.saveas)
         self.action_exit.triggered.connect(exit)
+        self.action_open_db_manager.triggered.connect(self.db_manager.show)
 
     def update_lsystem_params(self) -> None:
         self._update_name()
@@ -611,3 +631,151 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.update_limage_params(self.scaled_limage, scale)
         self.update_drawer_params(self.scaled_image_drawer)
         self.scaled_draw_thread.start()
+
+
+class Ui_Form(object):
+    def setupUi(self, Form):
+        Form.setObjectName("Form")
+        Form.resize(722, 503)
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout(Form)
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.groupBox = QtWidgets.QGroupBox(Form)
+        self.groupBox.setObjectName("groupBox")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.groupBox)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.groupBox_2 = QtWidgets.QGroupBox(self.groupBox)
+        self.groupBox_2.setObjectName("groupBox_2")
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.groupBox_2)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.spinBox_id = QtWidgets.QSpinBox(self.groupBox_2)
+        self.spinBox_id.setMinimum(1)
+        self.spinBox_id.setMaximum(1000000)
+        self.spinBox_id.setObjectName("spinBox_id")
+        self.verticalLayout_2.addWidget(self.spinBox_id)
+        self.pushButton_filter_id = QtWidgets.QPushButton(self.groupBox_2)
+        self.pushButton_filter_id.setObjectName("pushButton_filter_id")
+        self.verticalLayout_2.addWidget(self.pushButton_filter_id)
+        self.horizontalLayout_2.addWidget(self.groupBox_2)
+        self.groupBox_3 = QtWidgets.QGroupBox(self.groupBox)
+        self.groupBox_3.setObjectName("groupBox_3")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.groupBox_3)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.lineEdit_name = QtWidgets.QLineEdit(self.groupBox_3)
+        self.lineEdit_name.setObjectName("lineEdit_name")
+        self.verticalLayout.addWidget(self.lineEdit_name)
+        self.pushButton_filter_name = QtWidgets.QPushButton(self.groupBox_3)
+        self.pushButton_filter_name.setObjectName("pushButton_filter_name")
+        self.verticalLayout.addWidget(self.pushButton_filter_name)
+        self.horizontalLayout_2.addWidget(self.groupBox_3)
+        self.verticalLayout_3.addWidget(self.groupBox)
+        self.tableWidget = QtWidgets.QTableWidget(Form)
+        self.tableWidget.setObjectName("tableWidget")
+        self.tableWidget.setColumnCount(0)
+        self.tableWidget.setRowCount(0)
+        self.verticalLayout_3.addWidget(self.tableWidget)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.pushButton_load_selected = QtWidgets.QPushButton(Form)
+        self.pushButton_load_selected.setObjectName("pushButton_load_selected")
+        self.horizontalLayout.addWidget(self.pushButton_load_selected)
+        self.pushButton_del_selected = QtWidgets.QPushButton(Form)
+        self.pushButton_del_selected.setObjectName("pushButton_del_selected")
+        self.horizontalLayout.addWidget(self.pushButton_del_selected)
+        self.verticalLayout_3.addLayout(self.horizontalLayout)
+
+        self.retranslateUi(Form)
+        QtCore.QMetaObject.connectSlotsByName(Form)
+
+    def retranslateUi(self, Form):
+        _translate = QtCore.QCoreApplication.translate
+        Form.setWindowTitle(_translate("Form", "Lsystem-drawer db tools"))
+        self.groupBox.setTitle(_translate("Form", "Поиск"))
+        self.groupBox_2.setTitle(_translate("Form", "По id"))
+        self.pushButton_filter_id.setText(_translate("Form", "Отфильтровать"))
+        self.groupBox_3.setTitle(_translate("Form", "По названию"))
+        self.pushButton_filter_name.setText(
+            _translate("Form", "Отфильтровать"))
+        self.pushButton_load_selected.setText(
+            _translate("Form", "Загрузить выбранное"))
+        self.pushButton_del_selected.setText(
+            _translate("Form", "Удалить выбранное"))
+
+
+class Window_db(QWidget, BasicUiUtils, Ui_Form):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        if isfile("./database.db"):
+            self.db = sqlite3.connect("database.db")
+        else:
+            self.create_db()
+        self.initUi()
+
+    def initUi(self):
+        self.setupUi(self)
+        self.retranslateUi(self)
+        self.pushButton_filter_id.clicked.connect(self.filter_id)
+        self.pushButton_filter_name.clicked.connect(self.filter_name)
+
+    def create_db(self):
+        self.db = sqlite3.connect("database.db")
+        self.create_cursor()
+        self.execute_query("""CREATE TABLE "lsystems" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	"name"	TEXT NOT NULL,
+	"initiator"	INTEGER NOT NULL,
+	"rules"	INTEGER NOT NULL
+    );""")
+        self.close_cursor()
+
+    def get_col_names(self):
+        self.create_cursor()
+        self.execute_query_fetchone("SELECT * FROM lsystems")
+        names = map(lambda val: val[0], self.cur.description)
+        self.close_cursor()
+        return tuple(names)
+
+    def create_cursor(self):
+        self.cur = self.db.cursor()
+
+    def execute_query(self, query):
+        return self.cur.execute(query)
+
+    def close_cursor(self):
+        self.cur.close()
+
+    def execute_query_fetchone(self, query):
+        return self.cur.execute(query).fetchone()
+
+    def execute_query_fetchall(self, query):
+        return self.cur.execute(query).fetchall()
+
+    def fill_table(self, header, data):
+        self.tableWidget.setRowCount(0)
+        self.tableWidget.setColumnCount(0)
+        self.tableWidget.setColumnCount(len(header))
+        self.tableWidget.setHorizontalHeaderLabels(header)
+        self.tableWidget.setRowCount(0)
+        for row_num, row_data in enumerate(data):
+            self.tableWidget.setRowCount(self.tableWidget.rowCount() + 1)
+            for el_num, el in enumerate(row_data):
+                label = QLabel(str(el))
+                self.tableWidget.setCellWidget(row_num, el_num, label)
+        self.tableWidget.resizeColumnsToContents()
+        self.tableWidget.resizeRowsToContents()
+
+    def filter_id(self):
+        flt = self.spinBox_id.value()
+        header = self.get_col_names()
+        self.create_cursor()
+        data = self.execute_query(f"SELECT * FROM lsystems WHERE id = {flt}")
+        self.fill_table(header, data)
+        self.close_cursor()
+
+    def filter_name(self):
+        flt = self.lineEdit_name.text()
+        header = self.get_col_names()
+        self.create_cursor()
+        data = self.execute_query(
+            f"SELECT * FROM lsystems WHERE name LIKE '%{flt}%'")
+        self.fill_table(header, data)
+        self.close_cursor()
