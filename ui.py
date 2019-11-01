@@ -843,7 +843,8 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
 
     def load_selected(self):
         rows = list(set([i.row() for i in self.tableWidget.selectedItems()]))
-        print(rows)
+        if not rows:
+            return
         lsys_id = min(self.tableWidget.item(i, 0).text() for i in rows)
         self.create_cursor()
         print(id)
