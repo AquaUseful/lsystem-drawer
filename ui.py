@@ -392,7 +392,7 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.scaled_image_drawer.finishSignal.connect(
             self.scaled_draw_thread.quit)
 
-        self.db_manager = Window_db()
+        self.db_manager = Window_db(self)
         self.initUi()
 
     def initUi(self) -> None:
@@ -733,12 +733,13 @@ class Ui_Form(object):
 
 
 class Window_db(QWidget, BasicUiUtils, Ui_Form):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, main_form):
+        super().__init__()
         if isfile("./database.db"):
             self.db = sqlite3.connect("database.db")
         else:
             self.create_db()
+        self.main_form = main_form
         self.initUi()
         self.filter_name()
 
@@ -748,6 +749,7 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
         self.pushButton_filter_id.clicked.connect(self.filter_id)
         self.pushButton_filter_name.clicked.connect(self.filter_name)
         self.pushButton_del_selected.clicked.connect(self.del_selected)
+        self.pushButton_load_selected.clicked.connect(self.load_selected)
 
     def create_db(self):
         self.db = sqlite3.connect("database.db")
@@ -828,4 +830,14 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
         self.commit_changes()
 
     def load_selected(self):
-        pass
+        rows = list(set([i.row() for i in self.tableWidget.selectedItems()]))
+        print(rows)
+        lsys_id = min(self.tableWidget.item(i, 0).text() for i in rows)
+        self.create_cursor()
+        print(id)
+        name, initiator, rules = self.execute_query_fetchone(
+            f"SELECT name, initiator, rules FROM lsystems WHERE id = '{lsys_id}'")
+        self.close_cursor()
+        self.main_form.lineEdit_name.setText(name)
+        self.main_form.lineEdit_initiator.setText(initiator)
+        self.main_form.plainTextEdit_rules.setPlainText(rules)
