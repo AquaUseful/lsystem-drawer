@@ -715,6 +715,7 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
         self.retranslateUi(self)
         self.pushButton_filter_id.clicked.connect(self.filter_id)
         self.pushButton_filter_name.clicked.connect(self.filter_name)
+        self.pushButton_del_selected.clicked.connect(self.del_selected)
 
     def create_db(self):
         self.db = sqlite3.connect("database.db")
@@ -749,6 +750,9 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
     def execute_query_fetchall(self, query):
         return self.cur.execute(query).fetchall()
 
+    def commit_changes(self):
+        self.db.commit()
+
     def fill_table(self, header, data):
         self.tableWidget.setRowCount(0)
         self.tableWidget.setColumnCount(0)
@@ -758,8 +762,8 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
         for row_num, row_data in enumerate(data):
             self.tableWidget.setRowCount(self.tableWidget.rowCount() + 1)
             for el_num, el in enumerate(row_data):
-                label = QLabel(str(el))
-                self.tableWidget.setCellWidget(row_num, el_num, label)
+                item = QTableWidgetItem(str(el))
+                self.tableWidget.setItem(row_num, el_num, item)
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
 
@@ -779,3 +783,14 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
             f"SELECT * FROM lsystems WHERE name LIKE '%{flt}%'")
         self.fill_table(header, data)
         self.close_cursor()
+
+    def del_selected(self):
+        rows = list(set([i.row() for i in self.tableWidget.selectedItems()]))
+        print(rows)
+        ids = tuple(self.tableWidget.item(i, 0).text() for i in rows)
+        self.create_cursor()
+        print(ids)
+        self.execute_query(
+            f"DELETE from lsystems WHERE id in ({', '.join(ids)})")
+        self.close_cursor()
+        self.commit_changes()
