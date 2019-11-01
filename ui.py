@@ -808,6 +808,7 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
             self.tableWidget.setRowCount(self.tableWidget.rowCount() + 1)
             for el_num, el in enumerate(row_data):
                 item = QTableWidgetItem(str(el))
+                item.setFlags(item.flags() ^ Qt.ItemIsEditable)
                 self.tableWidget.setItem(row_num, el_num, item)
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
