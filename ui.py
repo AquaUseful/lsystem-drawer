@@ -68,7 +68,8 @@ class Ui_MainWindow(object):
         self.horizontalLayout_6.addWidget(self.spinBox_size_y)
         self.gridLayout_3.addLayout(self.horizontalLayout_6, 3, 1, 1, 1)
         self.spinBox_start_angle = QtWidgets.QSpinBox(self.groupBox)
-        self.spinBox_start_angle.setMaximum(360)
+        self.spinBox_start_angle.setMinimum(-180)
+        self.spinBox_start_angle.setMaximum(180)
         self.spinBox_start_angle.setObjectName("spinBox_start_angle")
         self.gridLayout_3.addWidget(self.spinBox_start_angle, 5, 1, 1, 1)
         self.spinBox_angle = QtWidgets.QSpinBox(self.groupBox)
@@ -324,9 +325,11 @@ class Ui_MainWindow(object):
             "MainWindow", "Сохранить как..."))
         self.action_exit.setText(_translate("MainWindow", "Выход"))
         self.action_open_db_manager.setText(
-            _translate("MainWindow", "Загрузить из базы.."))
+            _translate("MainWindow", "Операция с БД..."))
         self.action_save_to_db.setText(
             _translate("MainWindow", "Сохранить в базу"))
+        self.action_save_to_db.setText(
+            _translate("MainWindow", "Сохранить в БД"))
 
 
 class BasicUiUtils(object):
@@ -770,7 +773,7 @@ class Window_db(QWidget, BasicUiUtils, Ui_Form):
 	"rules"	INTEGER NOT NULL,
 	"rot_angle"	INTEGER,
 	"plane_div"	INTEGER
-);""")
+    );""")
         self.close_cursor()
 
     def get_col_names(self):
