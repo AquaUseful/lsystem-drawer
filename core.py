@@ -14,10 +14,16 @@ class Lsystem(object):
         self.last_req = 0
 
     def set_inititator(self, inititator: str) -> None:
+        if inititator == self.initiator:
+            return
         self.initiator = inititator
+        self._param_changed()
 
     def set_rules(self, rules: dict) -> None:
+        if rules == self.rules:
+            return
         self.rules = rules
+        self._param_changed()
 
     def get_initiator(self) -> str:
         return self.initiator
@@ -38,6 +44,9 @@ class Lsystem(object):
                 *map(lambda char: self.rules[char] if char in self.rules else char, string))
         self.string = "".join(string)
         return self.string
+
+    def _param_changed(self) -> None:
+        self.last_req = 0
 
 
 class LsystemImage(object):
