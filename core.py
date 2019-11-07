@@ -91,9 +91,9 @@ class LsystemImage(object):
             elif char == "f":
                 x, y = point_on_circle((x, y), self.step_length, angle)
             elif char == "+":
-                angle += self.rot_angle
-            elif char == "-":
                 angle -= self.rot_angle
+            elif char == "-":
+                angle += self.rot_angle
             elif char == "|":
                 angle += pi
             elif char == "[":
