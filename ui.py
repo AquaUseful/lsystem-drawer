@@ -676,7 +676,7 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         exit()
 
 
-class Ui_Form(object):
+class Ui_db_window(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(722, 503)
@@ -744,7 +744,7 @@ class Ui_Form(object):
             _translate("Form", "Удалить выбранное"))
 
 
-class Window_db(QWidget, BasicUiUtils, Ui_Form):
+class Window_db(QWidget, BasicUiUtils, Ui_db_window):
     def __init__(self, main_form):
         super().__init__()
         if isfile("./database.db"):
