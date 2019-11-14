@@ -11,6 +11,8 @@ from functools import partial
 from os.path import isfile
 import sqlite3
 
+# Basic class for multithreading
+
 
 class LsystemImageDrawer(QObject):
     finishSignal = pyqtSignal()
@@ -31,6 +33,8 @@ class LsystemImageDrawer(QObject):
 
     def set_scale(self, scale: int) -> None:
         self.scale = scale
+
+# Auto-generated class
 
 
 class Ui_MainWindow(object):
@@ -331,6 +335,8 @@ class Ui_MainWindow(object):
         self.action_save_to_db.setText(
             _translate("MainWindow", "Сохранить в БД"))
 
+# Basic utils for all windows
+
 
 class BasicUiUtils(object):
 
@@ -378,29 +384,39 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.clear_path()
         self.lsystem = Lsystem("lsystem", "", {})
 
+        # Creating l-system image object
         self.limage = LsystemImage(self.lsystem)
         self.image_drawer = LsystemImageDrawer(self.limage)
         self.image_drawer.finishSignal.connect(self.update_label)
+        # Creating drawer for image into thread for multithreading
         self.draw_thread = QThread()
         self.draw_thread.started.connect(self.image_drawer.work)
         self.image_drawer.moveToThread(self.draw_thread)
         self.image_drawer.finishSignal.connect(self.draw_thread.quit)
 
+        # Creating scaled l-ystem image object
         self.scaled_limage = LsystemImage(self.lsystem)
         self.scaled_image_drawer = LsystemImageDrawer(self.scaled_limage)
         self.scaled_image_drawer.finishSignal.connect(self.save_image)
+        # Creating drawer for scaled image into thread
         self.scaled_draw_thread = QThread()
         self.scaled_draw_thread.started.connect(self.scaled_image_drawer.work)
         self.scaled_image_drawer.moveToThread(self.scaled_draw_thread)
         self.scaled_image_drawer.finishSignal.connect(
             self.scaled_draw_thread.quit)
 
+        # Creatign database manager window
         self.db_manager = Window_db(self)
+
+        # Loading ui
         self.initUi()
 
     def initUi(self) -> None:
+        # Loading ui from converted file
         self.setupUi(self)
         self.retranslateUi(self)
+
+        # Connectiong signals
         self.spinBox_step.valueChanged.connect(self.update_step_slider)
         self.horizontalSlider_step.valueChanged.connect(
             self.update_step_spinbox)
@@ -419,6 +435,7 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.action_open_db_manager.triggered.connect(self.db_manager.show)
         self.action_save_to_db.triggered.connect(self.save_to_db)
 
+    # Wrapper function for updating params
     def update_lsystem_params(self) -> None:
         self._update_name()
         self._update_inititator()
@@ -444,10 +461,12 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.lsystem.set_inititator(self.lineEdit_initiator.text())
 
     def _update_rules(self) -> None:
+        # Checking if rules is not empty
         try:
             rules_dict = strings_to_dict(
                 self.plainTextEdit_rules.toPlainText().split("\n"), " ")
         except IndexError:
+            # On empty rules dont change anything
             return
         self.lsystem.set_rules(rules_dict)
 
@@ -515,19 +534,24 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
             self.saveas()
 
     def saveas(self) -> None:
+        # Checking if file selected
         try:
             self.path = self.requset_save_path(
                 "Сохранить l-систему", "l-system files (*.ls)")
             self.save_data()
         except FileNotFoundError:
+            # Doing nothing if no file selected
             return
 
     def open(self) -> None:
+        # Checking if file selected
         try:
             self.path = self.request_open_path(
                 "Открыть l-систему", "l-system files (*.ls)")
         except FileNotFoundError:
+            # Doing nothing if no file selected
             return
+        # Loading data if file selected
         self.load_data()
 
     def load_data(self) -> None:
@@ -535,17 +559,18 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
             text = f.read()
         lines = text.strip().split("\n")
         lines = tuple(line.strip() for line in lines)
-        print(lines)
-        print(*map(lambda line: " " in line, lines[3:]))
+        # Checking for file format
         if not (lines[1].isdecimal() and
                 all(map(lambda line: " " in line, lines[3:]))):
             self.clear_path()
             self.show_messagebox("Неверный формат файла!")
             return
         try:
+            # Asking for loading mode
             mode = self.request_choice(
                 "Как загрузить данные", "Выберите режим поворотов", ("Деление плоскости", "Угол"))
         except InterruptedError:
+            # Clearing path and exiting if mode not selected
             self.clear_path()
             return
         name = lines[0]
@@ -629,7 +654,6 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
 
     def generate_scaled_result(self) -> None:
         scale = self.spinBox_scale.value()
-        print(scale)
         self.update_lsystem_params()
         self.update_limage_params(self.scaled_limage, scale)
         self.update_drawer_params(self.scaled_image_drawer)
@@ -637,12 +661,16 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
 
     def save_to_db(self):
         name = self.lineEdit_name.text()
+
+        # Checking name
         if not name:
             name = "lsystem"
         if self.radioButton_angle_mode.isChecked():
             angle_div = self.spinBox_angle.value()
         else:
             angle_div = self.spinBox_plane_div.value()
+
+        # Loading params
         initiator = self.lineEdit_initiator.text()
         rules_text = self.plainTextEdit_rules.toPlainText()
         if self.radioButton_angle_mode.isChecked():
@@ -651,11 +679,14 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         else:
             rot_angle = ""
             plane_div = self.spinBox_plane_div.value()
+
         self.db_manager.create_cursor()
+
+        # Checking is same system exists
         id_with_name = self.db_manager.execute_query_fetchone(
             f"SELECT id FROM lsystems WHERE name = '{name}'")
-        print(id_with_name)
         if id_with_name:
+            # Asking for overwrite
             ans = QMessageBox.question(self, "Перезапись",
                                        "Такая система уже сохранена в БД, перезаписать?",
                                        QMessageBox.Yes, QMessageBox.No)
@@ -672,6 +703,7 @@ class MainWindow(QMainWindow, BasicUiUtils, Ui_MainWindow):
         self.db_manager.close_cursor()
         self.db_manager.commit_changes()
 
+    # Close app on closing main form
     def closeEvent(self, event):
         exit()
 
