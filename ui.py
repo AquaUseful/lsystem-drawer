@@ -9,6 +9,7 @@ from utils import decart_to_image_coords, angle_part_of_circle, \
     deg_to_rad, strings_to_dict, image_to_pixmap
 from functools import partial
 from os.path import isfile
+from sys import exit
 import sqlite3
 
 # Basic class for multithreading
